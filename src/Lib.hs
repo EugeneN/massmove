@@ -27,7 +27,7 @@ import           System.FilePath.Posix     (takeFileName)
 
 data Progress = Progress
   { starttime      :: UTCTime
-  , itemsProcessed :: [(SFP.FilePath, SFP.FilePath)]
+  , itemsProcessed :: Int
   }
 
 imageFilenameSuffix :: SFP.FilePath -> SFP.FilePath
@@ -51,28 +51,23 @@ printProgress mv maxItems = do
 
   now <- getCurrentTime
   let deltat = diffUTCTime now start
-      itemsDone = length xs
+      itemsDone = xs
   putStr $ show deltat
   putStr " "
   putStr (show itemsDone)
-  putStr "/"
-  putStr (show maxItems)
-  putStr " "
-  -- putStr . show $ (itemsDone / 1.0) / (round deltat)
-  putStrLn ""
+  putStr " / "
+  putStr . show $ (itemsDone `div` (let x = round deltat in if x == 0 then 1 else x))
+  putStrLn " files/sec"
 
 sfp2fp = fromText . T.pack
 fp2sft x = case toText x of
   Right s -> T.unpack s
   Left s -> T.unpack s
 
-massmove :: ((SFP.FilePath, SFP.FilePath) -> IO ()) -> Int -> SFP.FilePath -> SFP.FilePath -> IO ()
+massmove :: (Int -> IO ()) -> Int -> SFP.FilePath -> SFP.FilePath -> IO ()
 massmove progress count src dst = do
   cwd <- getCurrentDirectory
   absSrc <- makeAbsolute $ cwd SFP.</> src
-
-  putStrLn $ "cwd: " <> cwd
-  putStrLn $ "absSrc: " <> absSrc
 
   let absSrc' = sfp2fp absSrc
 
@@ -89,20 +84,13 @@ massmove progress count src dst = do
           absDstDir = cwd SFP.</> dst SFP.</> dstSuffix
           absDstFn  = absDstDir SFP.</> takeFileName srcfn
 
-      putStrLn $ "srcfn': " <> show srcfn'
-      putStrLn $ "srcfn: " <> show srcfn
-      putStrLn $ "dstSuffix: " <> show dstSuffix
-      putStrLn $ "absDstDir: " <> show absDstDir
-      putStrLn $ "absDstFn: " <> show absDstFn
-      putStrLn $ "about to move " <> show absSrcFn <> " -> " <> show absDstFn
       ex <- doesFileExist absSrcFn
-      putStrLn $ show absSrcFn <> " exists: " <> show ex
 
       when ex $ do
         createDirectoryIfMissing True absDstDir
         copyFile absSrcFn absDstFn
         removeFile absSrcFn
-        progress (absSrcFn, absDstFn)
+        progress 1
 
 
 

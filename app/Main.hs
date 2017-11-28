@@ -28,9 +28,9 @@ main = do
       then do
         now <- getCurrentTime
 
-        mv <- newMVar $ Progress now []
+        mv <- newMVar $ Progress now 0
 
-        let progress sd = modifyMVar_ mv (\(Progress s xs) -> pure $ Progress s (xs <> [sd]))
+        let progress sd = modifyMVar_ mv (\(Progress s xs) -> pure $ Progress s (xs + sd))
 
         putStrLn "Starting"
         putStrLn "_"
