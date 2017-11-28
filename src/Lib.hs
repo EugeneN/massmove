@@ -2,32 +2,43 @@
 
 module Lib where
 
-import           Control.Concurrent.MVar (MVar, readMVar)
-import           Control.Monad           (when)
-import qualified Data.Hashable           as DH
-import qualified Data.List.Split         as DLS
-import           Data.Monoid             ((<>))
-import           Data.Time.Clock         (UTCTime (..), diffUTCTime,
-                                          getCurrentTime)
-import qualified Numeric                 as Num
-import           System.Directory        (copyFile, createDirectoryIfMissing,
-                                          doesFileExist, getCurrentDirectory,
-                                          listDirectory, makeAbsolute,
-                                          removeFile)
-import           System.FilePath         (FilePath, (</>))
-import           System.FilePath.Posix   (takeFileName)
+import           Control.Concurrent.MVar   (MVar, readMVar)
+import           Control.Monad             (unless, when)
+import qualified Crypto.Hash               as CH
+import           Data.DirStream
+import qualified Data.List.Split           as DLS
+import           Data.Monoid               ((<>))
+import qualified Data.Text                 as T
+import           Data.Text.Encoding
+import           Data.Time.Clock           (UTCTime (..), diffUTCTime,
+                                            getCurrentTime)
+import qualified Filesystem.Path           as FP
+import           Filesystem.Path.CurrentOS (fromText, toText)
+import           Pipes
+import           Pipes.Safe
+import           Prelude                   hiding (FilePath, concat)
+import           System.Directory          (copyFile, createDirectoryIfMissing,
+                                            doesFileExist, getCurrentDirectory,
+                                            listDirectory, makeAbsolute,
+                                            removeFile)
+import qualified System.FilePath           as SFP
+import           System.FilePath.Posix     (takeFileName)
 
 
 data Progress = Progress
   { starttime      :: UTCTime
-  , itemsProcessed :: [(FilePath, FilePath)]
+  , itemsProcessed :: [(SFP.FilePath, SFP.FilePath)]
   }
 
-imageFilenameSuffix :: FilePath -> FilePath
+imageFilenameSuffix :: SFP.FilePath -> SFP.FilePath
 imageFilenameSuffix filename =
-  let fhash    = Num.showHex (DH.hash filename) ""
-      (x:xs)   = take 4 $ DLS.chunksOf 2 fhash
-  in foldl (</>) x xs
+  let hashit :: SFP.FilePath -> String
+      hashit y = show (CH.hash (encodeUtf8 . T.pack $ y) :: CH.Digest CH.SHA256)
+
+      hexfhash = hashit filename
+      (x:xs) = take 4 $ DLS.chunksOf 2 hexfhash
+
+  in foldl (SFP.</>) x xs -- (fmap sfp2fp xs)
 
 printHelp :: IO ()
 printHelp = do
@@ -50,37 +61,49 @@ printProgress mv maxItems = do
   -- putStr . show $ (itemsDone / 1.0) / (round deltat)
   putStrLn ""
 
+sfp2fp = fromText . T.pack
+fp2sft x = case toText x of
+  Right s -> T.unpack s
+  Left s -> T.unpack s
 
-massmove :: ((FilePath, FilePath) -> IO ()) -> Int -> FilePath -> FilePath -> IO ()
+massmove :: ((SFP.FilePath, SFP.FilePath) -> IO ()) -> Int -> SFP.FilePath -> SFP.FilePath -> IO ()
 massmove progress count src dst = do
   cwd <- getCurrentDirectory
-  absSrc <- makeAbsolute $ cwd </> src
-  ds <- listDirectory absSrc
+  absSrc <- makeAbsolute $ cwd SFP.</> src
 
   putStrLn $ "cwd: " <> cwd
   putStrLn $ "absSrc: " <> absSrc
 
-  move count cwd absSrc ds
+  let absSrc' = sfp2fp absSrc
+
+  runSafeT $ runEffect $
+    for (every (childOf absSrc')) $ \z ->
+      liftIO $ move count cwd dst absSrc z
 
   where
-    move c cwd absSrc [] = print "src directory empty"
-    move c cwd absSrc (srcfn:rest) = do
-      let absSrcFn  = absSrc </> srcfn
+    move :: Int -> SFP.FilePath -> SFP.FilePath -> SFP.FilePath -> FP.FilePath -> IO ()
+    move c cwd dst absSrc srcfn' = do
+      let srcfn     = fp2sft srcfn'
+          absSrcFn  = absSrc SFP.</> srcfn
           dstSuffix = imageFilenameSuffix srcfn
-          absDstDir = cwd </> dst </> dstSuffix
-          absDstFn  = cwd </> dst </> dstSuffix </> takeFileName srcfn
+          absDstDir = cwd SFP.</> dst SFP.</> dstSuffix
+          absDstFn  = absDstDir SFP.</> takeFileName srcfn
 
-      putStrLn $ "about to move " <> absSrcFn <> " -> " <> absDstFn
+      putStrLn $ "srcfn': " <> show srcfn'
+      putStrLn $ "srcfn: " <> show srcfn
+      putStrLn $ "dstSuffix: " <> show dstSuffix
+      putStrLn $ "absDstDir: " <> show absDstDir
+      putStrLn $ "absDstFn: " <> show absDstFn
+      putStrLn $ "about to move " <> show absSrcFn <> " -> " <> show absDstFn
       ex <- doesFileExist absSrcFn
-      putStrLn $ absSrcFn <> " exists: " <> show ex
+      putStrLn $ show absSrcFn <> " exists: " <> show ex
 
       when ex $ do
         createDirectoryIfMissing True absDstDir
         copyFile absSrcFn absDstFn
         removeFile absSrcFn
-        progress (srcfn, absDstFn)
+        progress (absSrcFn, absDstFn)
 
-      when (c > 0) $ move (c - 1) cwd absSrc rest
 
 
 

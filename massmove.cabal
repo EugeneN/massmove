@@ -26,7 +26,13 @@ library
                      , filepath
                      , hashable
                      , split
-                     
+                     , pipes
+                     , dirstream
+                     , pipes-safe
+                     , system-filepath
+                     , text
+                     , cryptonite
+
   default-language:    Haskell2010
 
 executable massmove-exe
