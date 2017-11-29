@@ -2,6 +2,9 @@
 
 echo "=========================================================================="
 
+mkdir -p test/src
+mkdir -p test/dst
+
 rm -rf test/dst/*
 rm -rf test/src/*
 for i in `seq 1 9`; do touch "test/src/${i}-file"; done
@@ -15,7 +18,7 @@ ls test/dst -R
 echo "--------------------------------------------------------------------------"
 
 echo "running massmove"
-stack exec massmove-exe 8 test/src/ test/dst/
+stack exec massmove-exe 2 test/src/ test/dst/
 
 echo "--------------------------------------------------------------------------"
 
