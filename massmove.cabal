@@ -1,6 +1,6 @@
 name:                massmove
 version:             0.1.0.0
-synopsis:            Short description of your package
+synopsis:            This is a proof of idea that Haskell can be used for routine systems administration tasks, like moving millions of files from a single directory into a manageable tree-like directory structure.
 homepage:            https://github.com/EugeneN/massmove
 license:             BSD3
 license-file:        LICENSE
@@ -14,7 +14,7 @@ cabal-version:       >=1.10
 -- To avoid duplicated efforts in documentation and dealing with the
 -- complications of embedding Haddock markup inside cabal files, it is
 -- common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/githubuser/massmove#readme>
+description:         Please see the README on Github at <https://github.com/EugeneN/massmove#readme>
 
 library
   hs-source-dirs:      src
@@ -57,4 +57,4 @@ test-suite massmove-test
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/massmove
+  location: https://github.com/EugeneN/massmove
