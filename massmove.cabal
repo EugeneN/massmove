@@ -1,12 +1,11 @@
 name:                massmove
 version:             0.1.0.0
 synopsis:            Short description of your package
-homepage:            https://github.com/githubuser/massmove#readme
+homepage:            https://github.com/EugeneN/massmove
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2017 Author name here
+author:              Eugene Naumenko
+copyright:           2017 Eugene Naumenko
 category:            Web
 build-type:          Simple
 extra-source-files:  README.md
