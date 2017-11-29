@@ -15,7 +15,7 @@ ls test/dst -R
 echo "--------------------------------------------------------------------------"
 
 echo "running massmove"
-stack exec massmove-exe 2 test/src/ test/dst/
+stack exec massmove-exe 8 test/src/ test/dst/
 
 echo "--------------------------------------------------------------------------"
 

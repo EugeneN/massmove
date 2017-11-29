@@ -26,61 +26,35 @@ import           System.FilePath.Posix     (takeFileName)
 
 
 data Progress = Progress
-  { starttime      :: UTCTime
+  { startTime      :: UTCTime
   , itemsProcessed :: Int
   }
 
-imageFilenameSuffix :: SFP.FilePath -> SFP.FilePath
-imageFilenameSuffix filename =
+imageFilenameSuffix :: SFP.FilePath -> Int -> SFP.FilePath
+imageFilenameSuffix filename treeDepth =
   let hashit :: SFP.FilePath -> String
       hashit y = show (CH.hash (encodeUtf8 . T.pack $ y) :: CH.Digest CH.SHA256)
 
       hexfhash = hashit filename
-      (x:xs) = take 4 $ DLS.chunksOf 2 hexfhash
+      (x:xs) = take treeDepth $ DLS.chunksOf 2 hexfhash
 
-  in foldl (SFP.</>) x xs -- (fmap sfp2fp xs)
-
-printHelp :: IO ()
-printHelp = do
-  putStrLn "Usage: <me> maxItems::Int src::FilePath dest::FilePath"
-  putStrLn ""
-
-printProgress :: MVar Progress -> Int -> IO ()
-printProgress mv maxItems = do
-  (Progress start xs) <- readMVar mv
-
-  now <- getCurrentTime
-  let deltat = diffUTCTime now start
-      itemsDone = xs
-  putStr $ show deltat
-  putStr " "
-  putStr (show itemsDone)
-  putStr " / "
-  putStr . show $ (itemsDone `div` (let x = round deltat in if x == 0 then 1 else x))
-  putStrLn " files/sec"
-
-sfp2fp = fromText . T.pack
-fp2sft x = case toText x of
-  Right s -> T.unpack s
-  Left s -> T.unpack s
+  in foldl (SFP.</>) x xs
 
 massmove :: (Int -> IO ()) -> Int -> SFP.FilePath -> SFP.FilePath -> IO ()
-massmove progress count src dst = do
+massmove progress treeDepth src dst = do
   cwd <- getCurrentDirectory
   absSrc <- makeAbsolute $ cwd SFP.</> src
 
-  let absSrc' = sfp2fp absSrc
-
   runSafeT $ runEffect $
-    for (every (childOf absSrc')) $ \z ->
-      liftIO $ move count cwd dst absSrc z
+    for (every (childOf $ sfp2fp absSrc)) $ \z ->
+      liftIO $ move treeDepth cwd dst absSrc z
 
   where
     move :: Int -> SFP.FilePath -> SFP.FilePath -> SFP.FilePath -> FP.FilePath -> IO ()
-    move c cwd dst absSrc srcfn' = do
+    move treeDepth cwd dst absSrc srcfn' = do
       let srcfn     = fp2sft srcfn'
           absSrcFn  = absSrc SFP.</> srcfn
-          dstSuffix = imageFilenameSuffix srcfn
+          dstSuffix = imageFilenameSuffix srcfn treeDepth
           absDstDir = cwd SFP.</> dst SFP.</> dstSuffix
           absDstFn  = absDstDir SFP.</> takeFileName srcfn
 
@@ -92,7 +66,25 @@ massmove progress count src dst = do
         removeFile absSrcFn
         progress 1
 
+printHelp :: IO ()
+printHelp = do
+  putStrLn "Usage: <me> treeDepth::Int src::FilePath dest::FilePath"
+  putStrLn ""
 
+printProgress :: MVar Progress -> Int -> IO ()
+printProgress mv treeDepth = do
+  (Progress start itemsDone) <- readMVar mv
 
+  now <- getCurrentTime
+  let deltat = diffUTCTime now start
+  putStr $ show deltat
+  putStr " "
+  putStr (show itemsDone)
+  putStr " / "
+  putStr . show $ (itemsDone `div` (let x = round deltat in if x == 0 then 1 else x))
+  putStrLn " files/sec"
 
-
+sfp2fp = fromText . T.pack
+fp2sft x = case toText x of
+  Right s -> T.unpack s
+  Left s  -> T.unpack s

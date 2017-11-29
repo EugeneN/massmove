@@ -9,47 +9,43 @@ import           Lib
 import           System.Directory        (doesDirectoryExist)
 import           System.Environment      (getArgs)
 
+
 delay = 1000000
-
-
 
 main :: IO ()
 main = do
   as <- getArgs
 
   case as of
-    (maxItems':src:dest:rest) -> do
-      let maxItems = read maxItems' :: Int
+    (treeDepth':src:dest:[]) -> do
+      let treeDepth = read treeDepth' :: Int
 
       srcExists <- doesDirectoryExist src
       dstExists <- doesDirectoryExist dest
 
-      if maxItems > 0 && maxItems < 1000000 && srcExists && dstExists
+      if treeDepth > 0 && treeDepth < 10 && srcExists && dstExists
       then do
         now <- getCurrentTime
 
         mv <- newMVar $ Progress now 0
 
-        let progress sd = modifyMVar_ mv (\(Progress s xs) -> pure $ Progress s (xs + sd))
+        let progress x = modifyMVar_ mv (\(Progress s xs) -> pure $ Progress s (xs + x))
 
         putStrLn "Starting"
         putStrLn "_"
 
         forkIO $ forever $ do
-          printProgress mv maxItems
+          printProgress mv treeDepth
           threadDelay delay
 
-        massmove progress maxItems src dest
+        massmove progress treeDepth src dest
 
         putStrLn "_"
         putStrLn "All done."
         putStrLn ""
-        printProgress mv maxItems
+        printProgress mv treeDepth
 
       else
         printHelp
 
     _ -> printHelp
-
-
-
