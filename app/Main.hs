@@ -3,11 +3,13 @@ module Main where
 import           Control.Concurrent      (forkIO, threadDelay)
 import           Control.Concurrent.MVar (modifyMVar_, newMVar)
 import           Control.Monad           (forever)
+import           Data.Maybe              (fromMaybe)
 import           Data.Monoid             ((<>))
 import           Data.Time.Clock         (getCurrentTime)
 import           Lib
 import           System.Directory        (doesDirectoryExist)
 import           System.Environment      (getArgs)
+import           Text.Read               (readMaybe)
 
 
 delay = 1000000
@@ -18,7 +20,7 @@ main = do
 
   case as of
     (treeDepth':src:dest:[]) -> do
-      let treeDepth = read treeDepth' :: Int
+      let treeDepth = fromMaybe 0 (readMaybe treeDepth')
 
       srcExists <- doesDirectoryExist src
       dstExists <- doesDirectoryExist dest
