@@ -77,12 +77,9 @@ printProgress mv treeDepth = do
 
   now <- getCurrentTime
   let deltat = diffUTCTime now start
-  putStr $ show deltat
-  putStr " "
-  putStr (show itemsDone)
-  putStr " / "
-  putStr . show $ (itemsDone `div` (let x = round deltat in if x == 0 then 1 else x))
-  putStrLn " files/sec"
+  putStrLn $ show deltat <> " " <> (show itemsDone) <> " / "
+          <> (show $ itemsDone `div` (let x = round deltat in if x == 0 then 1 else x))
+          <> " files/sec"
 
 sfp2fp = fromText . T.pack
 fp2sft x = case toText x of
