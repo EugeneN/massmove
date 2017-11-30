@@ -4,19 +4,19 @@ module Lib where
 
 import           Control.Concurrent.MVar   (MVar, readMVar)
 import           Control.Monad             (unless, when)
-import qualified Crypto.Hash               as CH
-import           Data.DirStream
-import qualified Data.List.Split           as DLS
+import           Crypto.Hash               (Digest, SHA256, hash)
+import           Data.DirStream            (childOf)
+import           Data.List.Split           (chunksOf)
 import           Data.Monoid               ((<>))
 import qualified Data.Text                 as T
-import           Data.Text.Encoding
+import           Data.Text.Encoding        (encodeUtf8)
 import           Data.Time.Clock           (UTCTime (..), diffUTCTime,
                                             getCurrentTime)
 import qualified Filesystem.Path           as FP
 import           Filesystem.Path.CurrentOS (fromText, toText)
-import           Pipes
-import           Pipes.Safe
-import           Prelude                   hiding (FilePath, concat)
+import           Pipes                     (every, for, liftIO, runEffect)
+import           Pipes.Safe                (runSafeT)
+import           Prelude
 import           System.Directory          (copyFile, createDirectoryIfMissing,
                                             doesFileExist, getCurrentDirectory,
                                             listDirectory, makeAbsolute,
@@ -33,10 +33,10 @@ data Progress = Progress
 imageFilenameSuffix :: SFP.FilePath -> Int -> SFP.FilePath
 imageFilenameSuffix filename treeDepth =
   let hashit :: SFP.FilePath -> String
-      hashit y = show (CH.hash (encodeUtf8 . T.pack $ y) :: CH.Digest CH.SHA256)
+      hashit y = show (hash (encodeUtf8 . T.pack $ y) :: Digest SHA256)
 
       hexfhash = hashit filename
-      (x:xs) = take treeDepth $ DLS.chunksOf 2 hexfhash
+      (x:xs) = take treeDepth $ chunksOf 2 hexfhash
 
   in foldl (SFP.</>) x xs
 
